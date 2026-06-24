@@ -144,6 +144,19 @@ html, body { width:100%; height:100%; font-family:'Segoe UI',sans-serif; backgro
 
 @keyframes shake { 0%{transform:translate(0,0) rotate(0)} 15%{transform:translate(-6px,-4px) rotate(-.4deg)} 30%{transform:translate(6px,4px) rotate(.4deg)} 45%{transform:translate(-5px,2px) rotate(-.3deg)} 60%{transform:translate(5px,-2px) rotate(.3deg)} 80%{transform:translate(-2px,1px) rotate(-.1deg)} 100%{transform:translate(0,0) rotate(0)} }
 .screen-shake { animation:shake 0.35s ease-out; }
+
+/* ── SLICED OVERLAY ── */
+@keyframes slicedIn { 0%{opacity:0;transform:scale(0.6)} 40%{opacity:1;transform:scale(1.08)} 100%{opacity:1;transform:scale(1)} }
+@keyframes slicedOut { 0%{opacity:1} 100%{opacity:0;transform:scale(1.15)} }
+#slicedOverlay {
+  display:none; position:fixed; inset:0; z-index:800;
+  background:rgba(0,0,0,0.75); backdrop-filter:blur(3px);
+  flex-direction:column; align-items:center; justify-content:center; gap:16px;
+}
+#slicedOverlay.show { display:flex; animation:slicedIn 0.45s cubic-bezier(.17,.67,.42,1.3) forwards; }
+#slicedOverlay.hide { animation:slicedOut 0.35s ease-in forwards; }
+#slicedImg { max-width:88vw; max-height:60vh; object-fit:contain; border-radius:16px; box-shadow:0 0 40px rgba(255,60,60,0.7); }
+#slicedLabel { font-size:36px; font-weight:900; color:#ffd700; text-shadow:3px 3px 0 #cc2222, 0 0 20px rgba(255,100,0,.8); }
 </style>
 </head>
 <body>
@@ -183,6 +196,10 @@ html, body { width:100%; height:100%; font-family:'Segoe UI',sans-serif; backgro
 
 <canvas id="catCanvas"></canvas>
 <div id="cutBadge"></div>
+<div id="slicedOverlay">
+  <div id="slicedLabel">🩸 НАРЕЗАНО!</div>
+  <img id="slicedImg" src="cat_sliced.webp" alt="">
+</div>
 
 <div id="energyWrap">
   <div id="energyBarOuter"><div id="energyFill"></div></div>
@@ -472,12 +489,12 @@ function sliceComplete(cx, cy) {
 }
 
 function showSliced() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  const img = IMG_SLICED.naturalWidth ? IMG_SLICED : IMG_FLAT;
-  const h   = canvas.height - 15;
-  const w   = Math.round(h * img.naturalWidth / img.naturalHeight);
-  ctx.drawImage(img, (canvas.width - w) / 2, 15, w, h);
-  setTimeout(reset, 900);
+  const ov = document.getElementById('slicedOverlay');
+  ov.classList.remove('hide'); ov.classList.add('show');
+  setTimeout(() => {
+    ov.classList.remove('show'); ov.classList.add('hide');
+    setTimeout(() => { ov.classList.remove('hide'); reset(); }, 380);
+  }, 1600);
 }
 
 function reset() {
