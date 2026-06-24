@@ -261,13 +261,18 @@ function buyEnergyRefill() {
         spawnFlt('⚡ +500 🥩', window.innerWidth/2, window.innerHeight*0.4);
       }
     });
-  } else { energy = MAX_ENERGY; updateEnergyUI(); }
+  } else {
+    spawnFlt('⚡ Только в Telegram!', window.innerWidth/2, window.innerHeight*0.5);
+  }
 }
 function updateEnergyUI() {
   const pct = energy / MAX_ENERGY * 100;
   document.getElementById('energyFill').style.width = pct + '%';
   document.getElementById('energyTxt').textContent = `🥩 ${energy} / ${MAX_ENERGY}`;
   document.getElementById('energyBarOuter').classList.toggle('low', energy < 100);
+  const btn = document.getElementById('energyBtn');
+  btn.style.opacity = energy >= MAX_ENERGY ? '0.35' : '1';
+  btn.style.display = energy >= MAX_ENERGY ? 'none' : 'inline-block';
 }
 setInterval(() => {
   if (energy < MAX_ENERGY) {
