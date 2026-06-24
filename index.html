@@ -290,17 +290,17 @@ function csW(h) {
 function loafW() {
   return IMG_FLAT.naturalWidth ? Math.round(CAT_H * IMG_FLAT.naturalWidth / IMG_FLAT.naturalHeight) : Math.round(CAT_H * 1.6);
 }
-function sitDims() { // returns {w,h} for mobile cat_sit display
-  const maxH = Math.min(Math.round((window.innerHeight - 52) * 0.55), 320);
-  const aspect = IMG_SIT.naturalWidth ? IMG_SIT.naturalWidth / IMG_SIT.naturalHeight : 0.85;
+function mobileDims() {
+  const aspect = IMG_FLAT.naturalWidth ? IMG_FLAT.naturalWidth / IMG_FLAT.naturalHeight : 1.62;
+  const maxH = Math.min(Math.round(window.innerWidth * 0.78), 250);
   return { h: maxH, w: Math.round(maxH * aspect) };
 }
 
 // ── CANVAS INIT ──────────────────────────────────────────────────────────────
 function initCanvas() {
   if (isMobile()) {
-    const d = sitDims();
-    canvas.width  = d.w + 20;
+    const d = mobileDims();
+    canvas.width  = d.w + 10;
     canvas.height = d.h + 15;
   } else {
     const fanTotalW = (MAX_CUTS - 1) * SLICE_OVL_FAN + csW(215);
@@ -317,10 +317,10 @@ IMG_SIT.onload  = onImgLoad;
 // ── DRAW MOBILE (sitting cat + slash marks) ──────────────────────────────────
 function drawMobile() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  if (!IMG_SIT.naturalWidth) return;
-  const d = sitDims();
+  if (!IMG_FLAT.naturalWidth) return;
+  const d = mobileDims();
   const x = (canvas.width - d.w) / 2, y = 15;
-  ctx.drawImage(IMG_SIT, x, y, d.w, d.h);
+  ctx.drawImage(IMG_FLAT, 0, 0, IMG_FLAT.naturalWidth, IMG_FLAT.naturalHeight, x, y, d.w, d.h);
   // slash marks
   ctx.save(); ctx.lineCap = 'round';
   for (const s of mobileSlashes) {
